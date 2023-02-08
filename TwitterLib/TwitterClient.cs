@@ -1,6 +1,8 @@
 ﻿using Newtonsoft.Json;
+using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
+using TwitterLib.Interface;
 using TwitterLib.Model;
 
 namespace TwitterLib
@@ -11,6 +13,7 @@ namespace TwitterLib
         private static int _counter = 0;
         private static bool _running = false;
         private static readonly object _instanceLock = new object();
+        private static CancellationToken _cancellationToken = new CancellationToken();
 
 
         private TwitterClient()
@@ -39,34 +42,31 @@ namespace TwitterLib
             }
         }
 
-        public static async Task GetTweets()
-        {
-            await foreach (var name in StartReceivingTweets())
-            {
-                Console.WriteLine(name);
-            }
-        }
-
         // Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(myJsonResponse);
-        
-        public static async IAsyncEnumerable<Root> StartReceivingTweets()
+        public static async Task StartReceivingTweets(IEnumerable<IDataSink> dataSinks)
         {
+            if (dataSinks == null)
+                throw new ApplicationException("dataSinks can't be null.");
+
+            var token = Environment.GetEnvironmentVariable("BEARERTOKEN");
 
             var url = "https://api.twitter.com/2/tweets/sample/stream";
 
-            var httpRequest = (HttpWebRequest)WebRequest.Create(url);
+            //var httpRequest = (HttpWebRequest)WebRequest.Create(url);
+            var httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri(url);
+            httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
 
-            httpRequest.Accept = "application/json";
-            var token = Environment.GetEnvironmentVariable("BEARERTOKEN");
-            httpRequest.Headers["Authorization"] = $"Bearer {token}";
-
-
-            var httpResponse = (HttpWebResponse)httpRequest.GetResponse();
+            var httpResponse = (HttpWebResponse)httpClient.GetResponse();
             using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
             {
-                var myJsonResponse = streamReader.ReadLine();
-                var tweet = await Task.Factory.StartNew(() => JsonConvert.DeserializeObject<Root>(myJsonResponse));
-                yield return tweet;
+                while (!_cancellationToken.IsCancellationRequested)
+                {
+                    var tweet = await streamReader.ReadLineAsync(_cancellationToken);
+                    if (!string.IsNullOrEmpty(tweet))
+                        Parallel.ForEach(dataSinks, (sink) => { sink.RecieveTweet(tweet); });
+                }
             }
         }
 

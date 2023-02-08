@@ -1,4 +1,5 @@
 using TwitterLib;
+using TwitterLib.Interface;
 
 namespace MiniTweetStream.Test
 {
@@ -13,9 +14,11 @@ namespace MiniTweetStream.Test
 
 
         [Fact]
-        public void ShouldBeAbleToStartReceivingTweets()
+        public async Task ShouldBeAbleToStartReceivingTweets()
         {
-            var x = TwitterClient.GetTweets();
+            IDataSink dataSink = new DataSink();
+            List<IDataSink> dataSinkList = new List<IDataSink>();
+            await TwitterClient.StartReceivingTweets(dataSinkList);
         }
 
         //[Fact]
