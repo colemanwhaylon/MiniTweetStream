@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using TwitterLib.Interface;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -7,41 +8,17 @@ namespace TwitterLib
 
     public sealed class TwitterClient
     {
-        private static int _counter = 0;
-        private static bool _running = false;
         private static readonly object _instanceLock = new object();
         private static CancellationToken _cancellationToken = new CancellationToken();
+        private static ILogger _logger { get; set; }
+        public static bool Running { get; private set; } = false;
 
+        public TwitterClient(ILogger logger) { _logger = logger; }
 
-        private TwitterClient()
-        {
-            _counter++;
-            Console.WriteLine("Counter Value " + _counter.ToString());
-        }
-        private static TwitterClient instance = null;
-
-        public static bool Running { get { return _running; } private set { } }
-        public static TwitterClient GetInstance
-        {
-            get
-            {
-                if (instance == null)
-                {
-                    lock (_instanceLock)
-                    {
-                        if (instance == null)
-                        {
-                            instance = new TwitterClient();
-                        }
-                    }
-                }
-                return instance;
-            }
-        }
-
-        // Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(myJsonResponse);
         public static async Task StartReceivingTweets(IEnumerable<IDataSink> dataSinks)
         {
+            _logger.LogInformation($"StartReceivingTweets started.");
+
             if (dataSinks == null)
                 throw new ApplicationException("dataSinks can't be null.");
 
@@ -49,7 +26,6 @@ namespace TwitterLib
 
             var url = "https://api.twitter.com/2/tweets/sample/stream";
 
-            //var httpRequest = (HttpWebRequest)WebRequest.Create(url);
             var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri(url);
             httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
@@ -58,19 +34,20 @@ namespace TwitterLib
             var stream = new StreamReader(await httpClient.GetStreamAsync(url, _cancellationToken));
             while (!_cancellationToken.IsCancellationRequested)
             {
-                var tweet = await stream.ReadLineAsync();  
-                if(!string.IsNullOrEmpty(tweet))
+                Running = true;
+                var tweet = await stream.ReadLineAsync();
+                if (!string.IsNullOrEmpty(tweet))
                 {
-                    Console.WriteLine(tweet);
+                    _logger.LogInformation(tweet);
                     Parallel.ForEach(dataSinks, (sink) => { sink.RecieveTweet(tweet); });
                 }
             }
+            _logger.LogInformation($"StartReceivingTweets finished.");
         }
 
-        public static Task StopReceivingTweets()
+        public static void StopReceivingTweets()
         {
-            _running = false;
-            throw new NotImplementedException();
+            Running = false;
         }
     }
 }

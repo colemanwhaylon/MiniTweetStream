@@ -1,12 +1,19 @@
-﻿using TwitterLib.Interface;
+﻿using Microsoft.Extensions.Logging;
+using TwitterLib.Interface;
 
 namespace MiniTweetStream.Test
 {
     public class DataSink : IDataSink
     {
+        private readonly ILogger _logger;
+
+        public DataSink(ILogger logger)
+        {
+            this._logger = logger;
+        }
         public void RecieveTweet(string tweet)
         {
-            Console.WriteLine(tweet);   
+            _logger.LogInformation($"From IDataSink {nameof(DataSink)} {tweet}");   
         }
     }
 }
