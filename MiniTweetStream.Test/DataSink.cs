@@ -2,7 +2,11 @@
 
 namespace MiniTweetStream.Test
 {
-    internal class DataSink : IDataSink
+    public class DataSink : IDataSink
     {
+        public void RecieveTweet(string tweet)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
