@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using TwitterLib.Interface;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace TwitterLib
 {
@@ -54,16 +55,16 @@ namespace TwitterLib
             httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
 
-            //var httpResponse =  (HttpWebResponse)httpClient.GetResponse();
-            //using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
-            //{
-            //    while (!_cancellationToken.IsCancellationRequested)
-            //    {
-            //        var tweet = await streamReader.ReadLineAsync(_cancellationToken);
-            //        if (!string.IsNullOrEmpty(tweet))
-            //            Parallel.ForEach(dataSinks, (sink) => { sink.RecieveTweet(tweet); });
-            //    }
-            //}
+            var stream = new StreamReader(await httpClient.GetStreamAsync(url, _cancellationToken));
+            while (!_cancellationToken.IsCancellationRequested)
+            {
+                var tweet = await stream.ReadLineAsync();  
+                if(!string.IsNullOrEmpty(tweet))
+                {
+                    Console.WriteLine(tweet);
+                    Parallel.ForEach(dataSinks, (sink) => { sink.RecieveTweet(tweet); });
+                }
+            }
         }
 
         public static Task StopReceivingTweets()

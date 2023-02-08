@@ -6,7 +6,7 @@ namespace MiniTweetStream.Test
     {
         public void RecieveTweet(string tweet)
         {
-            throw new NotImplementedException();
+            Console.WriteLine(tweet);   
         }
     }
 }

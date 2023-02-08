@@ -18,6 +18,7 @@ namespace MiniTweetStream.Test
         {
             IDataSink dataSink = new DataSink();
             List<IDataSink> dataSinkList = new List<IDataSink>();
+            dataSinkList.Add(dataSink); 
             await TwitterClient.StartReceivingTweets(dataSinkList);
         }
 
