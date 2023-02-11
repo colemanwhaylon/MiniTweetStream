@@ -36,7 +36,7 @@ namespace MiniTweetStream.Test
                         .CreateLogger("TwitterClient");
 
             _cancellationToken = new CancellationToken();
-            var bearerToken = Environment.GetEnvironmentVariable("BEARER_TOKEN");
+            var bearerToken = Environment.GetEnvironmentVariable("BEARERTOKEN");
 
             _twitterClient = new TwitterClient(new TwitterClientOptions(bearerToken, 
                 _cancellationToken, 
@@ -48,6 +48,7 @@ namespace MiniTweetStream.Test
         [Fact]
         public async Task ShouldBeAbleToStartReceivingTweets()
         {
+            var tweetProcessor = new TweetProcessor("Default Tweet Processor", _twitterClient, _logger);
             await _twitterClient.StartReceivingTweets();
         }
 

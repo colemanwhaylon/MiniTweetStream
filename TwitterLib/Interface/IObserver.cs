@@ -2,6 +2,6 @@
 {
     public interface IObserver
     {
-        void Update(string tweet);
+        Task Update(string tweet);
     }
 }
