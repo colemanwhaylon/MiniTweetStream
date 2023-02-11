@@ -1,45 +1,48 @@
 ﻿using Microsoft.Extensions.Logging;
 using TwitterLib.Interface;
+using System.Net.Mime;
 
 namespace TwitterLib
 {
 
-    public sealed class TwitterClient
+    public sealed class TwitterClient : ISubject
     {
-        private static readonly object _instanceLock = new object();
-        private static CancellationToken _cancellationToken = new CancellationToken();
-        private static ILogger _logger { get; set; }
-        public static bool Running { get; private set; } = false;
+        private List<IObserver> _observers = new List<IObserver>();
+        private readonly TwitterClientOptions _twitterClientOptions;
+        private ILogger _logger;
 
-        public TwitterClient(ILogger logger) { _logger = logger; }
+        public bool Running { get; private set; } 
 
-        public static async Task StartReceivingTweets(IEnumerable<ITweetProcessor> dataSinks)
+        public TwitterClient(TwitterClientOptions twitterClientOptions, ILogger logger)
+        {
+            this._twitterClientOptions = twitterClientOptions;
+            _logger = logger;
+        }
+
+        public async Task StartReceivingTweets()
         {
             try
             {
                 _logger.LogInformation($"StartReceivingTweets started.");
 
-                if (dataSinks == null)
-                    throw new ApplicationException("dataSinks can't be null.");
-
-                var token = Environment.GetEnvironmentVariable("BEARERTOKEN");
-
-                var url = "https://api.twitter.com/2/tweets/sample/stream";
-
                 var httpClient = new HttpClient();
-                httpClient.BaseAddress = new Uri(url);
-                httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
-                httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
+                httpClient.BaseAddress = new Uri(_twitterClientOptions.TwitterAPIUrl);
 
-                var stream = new StreamReader(await httpClient.GetStreamAsync(url, _cancellationToken));
-                while (!_cancellationToken.IsCancellationRequested)
+                httpClient.DefaultRequestHeaders.Add( HeaderNames.Accept, MediaTypeNames.Application.Json);
+                
+                
+                httpClient.DefaultRequestHeaders.Add(HeaderNames.Authorization,  $"{AuthorizationValues.Bearer} {_twitterClientOptions.BearerToken}");
+
+                var stream = new StreamReader(await httpClient.GetStreamAsync(_twitterClientOptions.TwitterAPIUrl, 
+                    _twitterClientOptions.CancellationToken));
+                while (!_twitterClientOptions.CancellationToken.IsCancellationRequested)
                 {
                     Running = true;
                     var tweet = await stream.ReadLineAsync();
                     if (!string.IsNullOrEmpty(tweet))
                     {
                         _logger.LogInformation(tweet);
-                        Parallel.ForEach(dataSinks, (sink) => { sink.ProcessTweet(tweet); });
+                        NotifyObservers(tweet);
                     }
                 }
             }
@@ -55,9 +58,27 @@ namespace TwitterLib
 
         }
 
-        public static void StopReceivingTweets()
+        public void StopReceivingTweets()
         {
             Running = false;
+        }
+
+        public void RegisterObserver(IObserver observer)
+        {
+            _observers.Add(observer);
+        }
+
+        public void UnRegisterObserver(IObserver observer)
+        {
+            _observers.Remove(observer);    
+        }
+
+        public void NotifyObservers(string newTweet)
+        {
+            foreach (IObserver observer in _observers)
+            {
+                Parallel.ForEach(_observers, (observer) => { observer.Update(newTweet); });
+            }
         }
     }
 }

@@ -11,7 +11,9 @@ namespace MiniTweetStream.Test
 {
     public class TwitterLibTest
     {
-        private TwitterClient _twitterClient = null;
+        private const string twitterApiUrl = "https://api.twitter.com/2/tweets/sample/stream";
+        private readonly CancellationToken _cancellationToken;
+        private readonly TwitterClient _twitterClient;
         private readonly ILogger _logger;
 
         public TwitterLibTest()
@@ -33,17 +35,20 @@ namespace MiniTweetStream.Test
                         .GetRequiredService<ILoggerFactory>()
                         .CreateLogger("TwitterClient");
 
-            _twitterClient = new TwitterClient(_logger);
+            _cancellationToken = new CancellationToken();
+            var bearerToken = Environment.GetEnvironmentVariable("BEARER_TOKEN");
+
+            _twitterClient = new TwitterClient(new TwitterClientOptions(bearerToken, 
+                _cancellationToken, 
+                twitterApiUrl),
+                _logger);
         }
 
 
         [Fact]
         public async Task ShouldBeAbleToStartReceivingTweets()
         {
-            ITweetProcessor dataSink = new DefaultTweetProcessor(_logger);
-            List<ITweetProcessor> dataSinkList = new List<ITweetProcessor>();
-            dataSinkList.Add(dataSink);
-            await TwitterClient.StartReceivingTweets(dataSinkList);
+            await _twitterClient.StartReceivingTweets();
         }
 
         //[Fact]

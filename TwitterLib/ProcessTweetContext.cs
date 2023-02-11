@@ -9,21 +9,21 @@ namespace TwitterLib
 {
     public class ProcessTweetContext
     {
-        private ITweetProcessor _tweetProcessor;
+        private IObserver _tweetProcessor;
 
-        public ProcessTweetContext(ITweetProcessor tweetProcessor)
+        public ProcessTweetContext(IObserver tweetProcessor)
         {
             _tweetProcessor = tweetProcessor;
         }
 
-        public void SetStrategy(ITweetProcessor tweetProcessor)
+        public void SetStrategy(IObserver tweetProcessor)
         {
             _tweetProcessor = tweetProcessor;
         }
 
         public void ProcessTweet(string tweet)
         {
-            _tweetProcessor.ProcessTweet(tweet);
+            _tweetProcessor.Update(tweet);
         }
     }
 }
