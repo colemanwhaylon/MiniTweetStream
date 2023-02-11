@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace TwitterLib.Interface
 {
-    public interface IDataSink
+    public interface ITweetProcessor
     {
-        void RecieveTweet(string tweet);
+        void ProcessTweet(string tweet);
     }
 }

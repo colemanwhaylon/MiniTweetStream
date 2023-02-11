@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestPlatform.TestHost;
 using System.Text.Json;
 using TwitterLib;
+using TwitterLib.Impl;
 using TwitterLib.Interface;
 
 namespace MiniTweetStream.Test
@@ -39,8 +40,8 @@ namespace MiniTweetStream.Test
         [Fact]
         public async Task ShouldBeAbleToStartReceivingTweets()
         {
-            IDataSink dataSink = new DataSink(_logger);
-            List<IDataSink> dataSinkList = new List<IDataSink>();
+            ITweetProcessor dataSink = new DefaultTweetProcessor(_logger);
+            List<ITweetProcessor> dataSinkList = new List<ITweetProcessor>();
             dataSinkList.Add(dataSink);
             await TwitterClient.StartReceivingTweets(dataSinkList);
         }
