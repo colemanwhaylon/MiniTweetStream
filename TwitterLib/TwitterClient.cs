@@ -1,13 +1,16 @@
 ﻿using Microsoft.Extensions.Logging;
 using TwitterLib.Interface;
 using System.Net.Mime;
+using System.Linq;
+using System.Reflection.Metadata.Ecma335;
+using System.Security.Cryptography.X509Certificates;
 
 namespace TwitterLib
 {
 
     public class TwitterClient : ISubject
     {
-        private List<IObserver> _observers = new List<IObserver>();
+        private IEnumerable<IObserver> _observers = new List<IObserver>();
         private readonly TwitterClientOptions _twitterClientOptions;
         private ILogger _logger;
 
@@ -45,7 +48,7 @@ namespace TwitterLib
                         if (!string.IsNullOrEmpty(tweet))
                         {
                             _logger.LogInformation(tweet);
-                            NotifyObservers(tweet);
+                            await NotifyObservers(tweet);
                         }
                     }
                     catch { }
@@ -71,17 +74,24 @@ namespace TwitterLib
 
         public void RegisterObserver(IObserver observer)
         {
-            _observers.Add(observer);
+            _observers.Append(observer);
         }
 
         public void UnRegisterObserver(IObserver observer)
         {
-            _observers.Remove(observer);
+            ((List<IObserver>)_observers).Remove(observer);
         }
 
-        public void NotifyObservers(string newTweet)
+        public async Task NotifyObservers(string newTweet)
         {
-            Parallel.ForEach(_observers, (observer) => { observer.Update(newTweet); });
+            var retVal = new ValueTask(Task.CompletedTask);
+            await Parallel.ForEachAsync(_observers, (observer, cts) => 
+            {
+                if (cts.IsCancellationRequested)
+                    return retVal;
+                observer.Update(newTweet);
+                return retVal;
+            });
         }
     }
 }
