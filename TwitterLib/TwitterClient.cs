@@ -1,9 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using TwitterLib.Interface;
 using System.Net.Mime;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Security.Cryptography.X509Certificates;
+using TwitterLib.Interface;
 
 namespace TwitterLib
 {
@@ -48,8 +45,20 @@ namespace TwitterLib
                         if (!string.IsNullOrEmpty(tweet))
                         {
                             _logger.LogInformation(tweet);
-                            await NotifyObservers(tweet);
+                            NotifyObservers(tweet);
                         }
+                    }
+                    catch (ArgumentOutOfRangeException aoore)
+                    {
+                        break;
+                    }
+                    catch (ObjectDisposedException ode)
+                    {
+                        break;
+                    }
+                    catch (InvalidOperationException ioe)
+                    {
+                        break;
                     }
                     catch { }
                 }
@@ -74,7 +83,7 @@ namespace TwitterLib
 
         public void RegisterObserver(IObserver observer)
         {
-            _observers.Append(observer);
+            ((List<IObserver>)_observers).Add(observer);
         }
 
         public void UnRegisterObserver(IObserver observer)
@@ -82,16 +91,9 @@ namespace TwitterLib
             ((List<IObserver>)_observers).Remove(observer);
         }
 
-        public async Task NotifyObservers(string newTweet)
+        public void NotifyObservers(string newTweet)
         {
-            var retVal = new ValueTask(Task.CompletedTask);
-            await Parallel.ForEachAsync(_observers, (observer, cts) => 
-            {
-                if (cts.IsCancellationRequested)
-                    return retVal;
-                observer.Update(newTweet);
-                return retVal;
-            });
+            Parallel.ForEach(_observers, (observer, cts) => { observer.Update(newTweet); });
         }
     }
 }

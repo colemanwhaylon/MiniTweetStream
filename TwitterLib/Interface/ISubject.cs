@@ -10,6 +10,6 @@ namespace TwitterLib.Interface
     {
         void RegisterObserver(IObserver observer);
         void UnRegisterObserver(IObserver observer);
-        Task NotifyObservers(string newTweet);
+        void NotifyObservers(string newTweet);
     }
 }
